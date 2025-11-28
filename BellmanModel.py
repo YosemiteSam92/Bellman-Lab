@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 
 class BellmanModel:
-    def __init__(self, env: gym.env) -> None:
+    def __init__(self, env: gym.Env) -> None:
         """
         Initializes the model by extracting the transition dynamics
         from the Gymnasium environment and converting them to tensors.
@@ -10,7 +10,9 @@ class BellmanModel:
         Args:
             env (gym.env): The Gymnasium environment (e.g., FrozenLake-v1).
         """
-        self.env = env
+
+        # use .unwrapped to get the base non-wrapped environment.
+        self.env = env.unwrapped
 
         # 1. Get the shape of the world
         # S = number of states (16 for a 4x4 grid)
@@ -46,7 +48,7 @@ class BellmanModel:
             for a in range(self.A):
 
                 # retrieve the list of possible transitions for this (s, a) pair
-                transitions = self.evn[s][a]
+                transitions = self.env.P[s][a]
 
                 # iterate over each possible transition
                 # prob: probabilty of this outcome
