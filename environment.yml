@@ -1,0 +1,7 @@
+name: pysprint
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - gymnasium
