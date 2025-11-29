@@ -31,7 +31,7 @@ We utilize the `FrozenLake-v1` environment from the **Gymnasium** library (the m
 
 In "God Mode" (Dynamic Programming), we have access to the environment's internal transition probabilities. In Gymnasium, this is exposed via the `env.P` attribute, which uses a nested dictionary structure:
 
-env.P[state][action] = [(probability, next_state, reward, terminated), ...]
+`env.P[state][action] = [(probability, next_state, reward, terminated), ...]`
 
 One of the first challenges of this project is converting this dictionary-based structure into 3D Numpy Tensors suitable for matrix multiplication:
 
@@ -55,6 +55,34 @@ $$
 
 By treating the value function $V$ as a vector and the transitions $P$ as a tensor, we compute updates using `numpy.einsum` and broadcasting, eliminating Python-level loops over states.
 
+## 🧮 Vectorized Policy Evaluation
+
+Instead of iterating through states and actions with slow Python loops, we evaluate a policy $\pi$ by reducing the 3D dynamics tensors into 2D/1D matrices specific to that policy.
+
+We use `numpy.einsum` to perform these contractions efficiently:
+
+### 1. Policy Transition Matrix ($P^\pi$)
+* **Shape:** `(S, S)`
+* **Concept:** If I am in state $s$ and follow policy $\pi$, what is the probability I end up in state $s'$?
+* **Math:** $P^\pi_{ss'} = \sum_{a} \pi(a|s) P(s'|s,a)$
+* **Code:** `P_pi = np.einsum('sa, sak -> sk', policy, P)`
+
+### 2. Expected Reward Vector ($r^\pi$)
+* **Shape:** `(S,)`
+* **Concept:** If I am in state $s$ and follow policy $\pi$, how much immediate reward do I expect on average?
+* **Math:** $r^\pi_s = \sum_{a} \pi(a|s) \sum_{s'} P(s'|s,a) R(s,a,s')$
+* **Code:** `r_pi = np.einsum('sa, sak, sak -> s', policy, P, R)`
+
+### 3. The Update Rule
+With these pre-computed matrices, the Bellman Expectation Equation becomes a clean linear algebra operation. We iterate until convergence:
+
+$$V_{new} = r^\pi + \gamma (P^\pi \cdot V_{old})$$
+
+In code, this is simply:
+```python
+V_new = r_pi + gamma * (P_pi @ V)
+```
+
 ## 🚀 Roadmap
 
 1.  **Tensor-ification:** Bridge `env.P` to Numpy Tensors.
@@ -62,4 +90,3 @@ By treating the value function $V$ as a vector and the transitions $P$ as a tens
 3.  **Policy Iteration:** Full control loop.
 4.  **Value Iteration:** Aggressive value updates.
 5.  **Visualization:** Heatmap overlays and agent simulation.
-
