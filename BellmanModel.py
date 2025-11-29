@@ -135,7 +135,7 @@ class BellmanModel:
     
     def policy_evaluation(self, policy: np.ndarray, gamma=0.99, theta=1e-9) -> np.ndarray:
         """
-        Performs iterative policy evaluation to find V_pi given the policy.
+        Performs iterative policy evaluation to find V given the policy.
 
         Args:
             policy (np.andarray): Shape (S, A). The policy to evaluate.
@@ -148,18 +148,112 @@ class BellmanModel:
 
         P_pi, r_pi = self._get_policy_coefficients_einsum(policy)
         
-        V_pi = np.zeros(self.S)
+        V = np.zeros(self.S)
             
         while True:
             # The Bellman Expectation Equation in vector form:
             # V_new = r_pi + gamma * (P_pi @ V_old)
             # @ symbol denotes matrix multiplication
-            V_pi_new = r_pi + gamma * P_pi @ V_pi
+            V_new = r_pi + gamma * P_pi @ V
 
             # check for convergence (max absolute difference)
-            if np.max(np.abs(V_pi_new - V_pi)) < theta:
+            if np.max(np.abs(V_new - V)) < theta:
                 break
 
-            V_pi = V_pi_new
+            V = V_new
 
-        return V_pi
+        return V
+
+
+    def get_q_values(self, V: np.ndarray, gamma=0.99) -> np.ndarray:
+        """
+        Calculates the Q-value for all state-action pairs given a state-value function V.
+
+        Q(s, a) = Expected Immediate Reward + gamma * Expected Future Value
+
+        Args:
+            V (np.ndarray): Shape (S,). The current state-value estimates.
+            gamma (float): Discount factor.
+
+        Returns:
+            np.ndarray: Shape (S, A). The Q-values for all state-action pairs.
+        """
+
+        # Expected Immediate Reward = sum_k P(k|s, a) * R(s, a, k)
+        # Expected Future Value = sum_k P(k | s, a) * V(k)
+        return np.einsum('sak, sak -> sa', self.P, self.R) + gamma * np.einsum('sak, k -> sa', self.P, V)
+
+
+    def policy_improvement(self, V: np.ndarray, gamma=0.99) -> np.ndarray:
+        """
+        Generates a new, greedy policy based on the provided state-value function V.
+
+        Args:
+            V (np.ndarray): Shape (S,). Current state-value estimates.
+            gamma (float): Discount factor.
+
+        Returns:
+            np.ndarray: Shape (S, A). The new greedy, deterministic policy.
+        """
+        # 1. Calculate Q-values for the current V
+        # shape: (S, A)
+        Q = self.get_q_values(V, gamma)
+
+        # 2. FInd the best action for each state
+        # Shape: (S,) containing indices 0-3 from axis 1 of Q
+        best_actions = np.argmax(Q, axis=1)
+
+        # 3. Convert to one-hot encoding
+        # We need a policy matrix of shape (S, A) that assigns prob. 1.0
+        # to the best action, and 0.0 to all other actions
+        new_policy = np.zeros((self.S, self.A))
+        # use fancy indexing to set the 1s
+        # new_policy[row_indices, col_indices]
+        new_policy[np.arange(self.S), best_actions] = 1.0
+
+        return new_policy
+
+
+    def policy_iteration(self, gamma=0.9, theta=1e-9) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Performs the Policy Iteration algorithm.
+
+        1. Start with a random policy.
+        2. Evaluate it to get V.
+        3. Improve it to get a new greedy policy.
+        4. Repeat until the policy becomes stable (does not change anymore).
+
+        Args:
+            gamma (float): Discount factor.
+            theta (float): Convergence threshold for policy evaluation.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                - optimal policy: Shape (S, A)
+                - optimal value function: Shape (S,)
+        """
+        # 1. Initialize an arbitrary policy
+        policy = np.ones((self.S, self.A)) / self.A
+
+        iteration_count = 0
+
+        while True:
+
+            iteration_count += 1
+
+            # 2. Policy Evaluation ("prediction step")
+            V = self.policy_evaluation(policy, gamma, theta)
+
+            # 3. Policy Improvement ("control step")
+            # Create a new policy that is greedy w.r.t. the one just calculated
+            new_policy = self.policy_improvement(V, gamma)
+
+            # 4. Check for stability
+            # If the new policy is the same as the old one, we are done
+            if np.array_equal(new_policy, policy):
+                print(f"Policy iteration converged after {iteration_count} step.")
+                break
+
+            policy = new_policy
+
+        return policy, V
