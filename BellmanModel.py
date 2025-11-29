@@ -130,3 +130,35 @@ class BellmanModel:
         # r_pi = np.einsum('sa, sa -> s', policy, expected_rewards_sa)
         
         return P_pi, r_pi
+
+    
+    def policy_evaluation(self, policy: np.ndarray, gamma=0.99, theta=1e-9) -> np.ndarray:
+        """
+        Performs iterative policy evaluation to find V_pi given the policy.
+
+        Args:
+            policy (np.andarray): Shape (S, A). The policy to evaluate.
+            gamma (float): Discount factor.
+            theta (float): Convergence threshold.
+
+        Returns:
+            np.ndarray: Shape (S, ). The value function for the given policy.
+        """
+
+        P_pi, r_pi = self._get_policy_coefficients_einsum(policy)
+        
+        V_pi = np.zeros(self.S)
+            
+        while True:
+            # The Bellman Expectation Equation in vector form:
+            # V_new = r_pi + gamma * (P_pi @ V_old)
+            # @ symbol denotes matrix multiplication
+            V_pi_new = r_pi + gamma * P_pi @ V_pi
+
+            # check for convergence (max absolute difference)
+            if np.max(np.abs(V_pi_new - V_pi)) < theta:
+                break
+
+            V_pi = V_pi_new
+
+        return V_pi
