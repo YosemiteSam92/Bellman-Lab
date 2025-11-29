@@ -62,3 +62,71 @@ class BellmanModel:
 
                     # populate the reward tensor R
                     self.R[s, a, next_s] = reward
+
+
+    def _get_policy_coefficients(self, policy: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Computes the policy transition matrix P_pi
+        and the expected reward vector r_pi
+        for a gven policy using Einstein summation.
+
+        Args:
+            policy (np.ndarray): Shape (S, A). The policy probabilities.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                - P_pi: Shape (S, S). Transition probabilities between states under this policy.
+                - r_pi: Shape (S,). Expected immediate rewards for each state under this policy.
+        """
+        
+        # 1. Compute P_pi (S, S)
+        # broadcasting is necessary because policy has shape (S, A) while P has shape (S, A, S)
+        P_pi = np.sum(policy[:, :, np.newaxis] * self.P, axis=1)
+
+        # 2. Compute r_pi (S,)
+        # First, calculate the expected reward for each specific transition (s, a, s'), 
+        # weighing the reward tensor by the probability of that transition happening
+        # Shape: (S, A , S)
+        expected_rewards_sas = self.P * self.R
+
+        # Next, sum oveer next_states (s') to get expected reward for each pair (s, a)
+        # Shape: (S, A)
+        expected_rewards_sa = np.sum(expected_rewards_sas, axis=2)
+
+        # Finally, average over actions 'a' weighted by the policy
+        # Shape: (S,)
+        r_pi = np.sum(expected_rewards_sa * policy, axis=1)
+
+        return P_pi, r_pi
+
+    def _get_policy_coefficients_einsum(self, policy: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Computes the policy transition matrix P_pi
+        and the expected reward vector r_pi
+        for a gven policy using Einstein summation.
+
+        Args:
+            policy (np.ndarray): Shape (S, A). The policy probabilities.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                - P_pi: Shape (S, S). Transition probabilities between states under this policy.
+                - r_pi: Shape (S,). Expected immediate rewards for each state under this policy.
+        """
+        
+        # 1. Compute P_pi (S, S) by contracting the action dimension 'a' 
+        # between the policy and the P tensor
+        # 'sa' (policy) and 'sak' (P tensor) -> 'sk' (next state probs given current state)
+        # the repetition of 'sa' in both input operands implies that for all (s, a, k),
+        # the product policy[s, a] * P[s, a, k] is computed;
+        # the omission of 'a' from the output operand implies that the result is summed over all 'a'
+        P_pi = np.einsum('sa, sak -> sk', policy, self.P)
+
+        # 2. Compute r_pi (S,) in a single line
+        r_pi = np.einsum('sa, sak, sak -> s', policy, self.P, self.R)
+
+        # For clarity, this could be split into two operations:
+        # expected_rewards_sa =np.einsum('sak, sak -> sa', self.P, self.R)
+        # r_pi = np.einsum('sa, sa -> s', policy, expected_rewards_sa)
+        
+        return P_pi, r_pi
