@@ -12,6 +12,8 @@ class TestBellmanModel(unittest.TestCase):
         self.env = gym.make("FrozenLake-v1", is_slippery=True)
         self.model = BellmanModel(self.env)
 
+    """ Test tensor-ification methods """
+
     def test_tensor_shapes(self):
         """
         Verifies that P and R tensors have the correct (S,A,S) shapes.
@@ -59,6 +61,30 @@ class TestBellmanModel(unittest.TestCase):
             1.0,
             "Reward tensor does not contain the goal reward (+1)."
         )
+
+    """ Test policy evaluation """
+
+    def test_policy_evaluation_runs(self):
+        """
+        Verifies that policy_evaluation runs and returns a 
+        state-value vector of correct shape (S,).
+        """
+        # Create a uniform random policy: 1/4 prob for all 4 actions in all 16 states
+        policy = np.ones((16, 4)) / 4.0
+
+        # Run evaluation
+        V_pi = self.model.policy_evaluation(policy)
+
+        # Check that V_pi has the correct shape
+        expected_shape = (16,) # for 4x4 FrozenLake
+        self.assertEqual(
+            V_pi.shape,
+            expected_shape,
+            f"V_pi tensor shape mismatch. Should be (16,), got {V_pi.shape}"
+        )
+
+        # Check state values are non-negative for all states
+        self.assertTrue(np.all(V_pi >= 0), "All values in V_pi should be non-negative.")
 
 if __name__ == "__main__":
     unittest.main()
