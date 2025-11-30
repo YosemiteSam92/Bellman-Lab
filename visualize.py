@@ -31,7 +31,7 @@ def run_solver() -> Tuple[gym.Env, np.ndarray, np.ndarray]:
     return env, optimal_policy, optimal_V
 
 
-def plot_heatmap(env: gym.Env, V: np.ndarray, policy: np.ndarray, filename: str="value_heatmap.png") -> None:
+def plot_heatmap(env: gym.Env, V: np.ndarray, policy: np.ndarray, filename: str="assets/value_heatmap.png") -> None:
     """
     Visualizes the state-value function V as a heatmap 
     and overlays the optimal policy as arrows.
@@ -97,7 +97,7 @@ def plot_heatmap(env: gym.Env, V: np.ndarray, policy: np.ndarray, filename: str=
     plt.close()
 
 
-def record_agent_run(env: gym.Env, policy: np.ndarray, filename: str="agent_run.gif") -> None:
+def record_agent_run(env: gym.Env, policy: np.ndarray, filename: str="assets/agent_run.gif") -> None:
     """
     Runs a simulation of the agent following the provided policy
     and saves the frames as a GIF.
