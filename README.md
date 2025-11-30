@@ -81,6 +81,17 @@ $$V_{new} = r^\pi + \gamma (P^\pi \cdot V_{old})$$
 
     V_new = r_pi + gamma * (P_pi @ V)
 
+#### Note on Analytical Solution
+While we use iterative policy evaluation to demonstrate the underlying dynamic programming mechanism, the Bellman Expectation Equation for a fixed policy is a linear system:
+
+$$(I - \gamma P^\pi)V^\pi = r^\pi$$
+
+For small state spaces like Frozen Lake ($N=16$), we could technically solve for $V^\pi$ directly by inverting the matrix:
+
+$$V^\pi = (I - \gamma P^\pi)^{-1} r^\pi$$
+
+However, matrix inversion carries a computational complexity of $O(N^3)$. We deliberately choose the iterative approach ($O(N^2)$ per iteration) because it is more numerically stable for large matrices and scales better to high-dimensional state spaces, mirroring the logic used in deep reinforcement learning.
+
 ## Vectorized Policy Improvement
 
 Once we have the value of the current policy ($V^\pi$), we can improve it by acting greedily. This requires calculating the Action-Value function $Q(s, a)$.
