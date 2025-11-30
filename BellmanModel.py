@@ -214,7 +214,7 @@ class BellmanModel:
         return new_policy
 
 
-    def policy_iteration(self, gamma=0.9, theta=1e-9) -> Tuple[np.ndarray, np.ndarray]:
+    def policy_iteration(self, gamma=0.99, theta=1e-9) -> Tuple[np.ndarray, np.ndarray]:
         """
         Performs the Policy Iteration algorithm.
 
