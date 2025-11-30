@@ -257,3 +257,46 @@ class BellmanModel:
             policy = new_policy
 
         return policy, V
+
+
+    def value_iteration(self, gamma=0.99, theta=1e-9) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Performs the Value Iteration algorithm to find the optimal policy and value function.
+
+        Unlike policy iteration, which alternates between full evaluation and improvement, 
+        value iteration combines them into a single update step:
+        V(s) <- max_a Q(s, a)
+
+        Args:
+            gamma (float): Discount factor.
+            theta (float): Convergence threshold for V.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                - optimal policy: Shape (S, A)
+                - optimal value function: Shape (S,)
+        """
+
+        # 1. Initialize V arbitrarily
+        V = np.zeros(self.S)
+
+        iteration_count = 0
+
+        while True:
+
+            iteration_count += 1
+
+            # 2. Compute Q-values and take the max over actions
+            V_new = self.get_q_values(V, gamma).max(axis=1)
+
+            # 3. Check for convergence
+            if np.max(np.abs(V_new - V)) < theta:
+                print(f"Value iteration converged after {iteration_count} step.")
+                break
+
+            V = V_new
+
+        # 4. Create a new policy that is greedy w.r.t. the optimal value function just calculated
+        optimal_policy = self.policy_improvement(V, gamma)
+
+        return optimal_policy, V
