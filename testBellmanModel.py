@@ -139,7 +139,32 @@ class TestBellmanModel(unittest.TestCase):
             "The goal state (15) should have zero value."
         )
 
+    """ Test value iteration """
 
+    def test_value_iteration_optimality(self):
+        """
+        Verifies that Value Iteration converges to the same result as Policy Iteration.
+        """
+        gamma = 0.99
+
+        # 1. Run policy iteration (ground truth)
+        pi_policy, pi_V = self.model.policy_iteration(gamma=gamma)
+
+        # 2. Run value iteration
+        vi_policy, vi_V = self.model.value_iteration(gamma=gamma)
+
+        # 3. Compare value functions
+        # They should be identical within floating-point tolerance
+        self.assertTrue(
+            np.allclose(pi_V, vi_V, atol=1e-5),
+            f"Value Iteration V* does not match Policy Iteration V*.\nDiff:\n {pi_V - vi_V}"
+        )
+
+        # 4. Compare policies
+        self.assertTrue(
+            np.allclose(pi_policy, vi_policy, atol=1e-5),
+            f"Policy Iteration policy does not match Value Iteration policy.\nDiff: {pi_policy - vi_policy}"
+        )
 
 
 if __name__ == "__main__":
