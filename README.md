@@ -111,10 +111,28 @@ The full **Policy Iteration** algorithm simply loops between the two vector oper
 
 This method is guaranteed to converge to the optimal policy $\pi^*$.
 
+## Value Iteration
+
+While Policy Iteration alternates between two distinct phases (evaluation and improvement), **Value Iteration** combines them into a single, aggressive update step.
+
+Instead of evaluating a specific policy until convergence, we update the value of a state directly by assuming we always take the best action available:
+
+$$V_{new}(s) = \max_a Q(s, a)$$
+
+We vectorize this efficiently:
+
+    # 1. Calculate Q-values for all actions (S, A)
+    Q = self.get_q_values(V, gamma)
+
+    # 2. Update V to be the max Q-value (S,)
+    V_new = np.max(Q, axis=1)
+
+By repeating this update until $V$ stops changing, we converge to $V^*$. This approach is often computationally cheaper per iteration than Policy Iteration because it avoids solving a linear system or running a nested evaluation loop.
+
 ## Roadmap
 
 1.  **Tensor-ification:** Bridge `env.P` to Numpy Tensors. [Complete]
 2.  **Vectorized Policy Evaluation:** Implement $V^\pi$ estimation. [Complete]
 3.  **Policy Iteration:** Full control loop. [Complete]
-4.  **Value Iteration:** Aggressive value updates.
+4.  **Value Iteration:** Aggressive value updates. [Complete]
 5.  **Visualization:** Heatmap overlays and agent simulation.
