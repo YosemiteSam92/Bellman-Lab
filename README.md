@@ -2,13 +2,13 @@
 
 A fully vectorized, Numpy-based implementation of Dynamic Programming algorithms (Value Iteration and Policy Iteration) to solve the `Frozen Lake` environment from Gymnasium.
 
-## 🎯 Project Goal
+## Project Goal
 
 The primary objective of this project is to bridge the gap between the mathematical formulation of Bellman equations and efficient, vectorized code.
 
 While many introductory RL tutorials implement Dynamic Programming using nested for loops (iterating over every state and action sequentially), this project focuses on **vectorization**—using Linear Algebra to process the entire state-space simultaneously. This approach mirrors the mathematical notation found in R&D literature and significantly improves performance.
 
-## 🧊 The Environment: Frozen Lake
+## The Environment: Frozen Lake
 
 We utilize the `FrozenLake-v1` environment from the **Gymnasium** library (the maintained fork of OpenAI Gym).
 
@@ -45,17 +45,16 @@ The environment includes an `is_slippery` parameter:
 * **True (Default):** Movement is stochastic. Due to the slippery ice, the agent moves in the intended direction with probability $1/3$, and in perpendicular directions with probability $1/3$ each.
 * **False:** Deterministic movement (useful for debugging and sanity checks).
 
-## 🧮 Theoretical Foundation
+## Theoretical Foundation
 
-We solve the Control Problem using the **Bellman Optimality Equation**:
+We solve the **Control Problem** (finding the optimal policy $\pi^*$) using the Bellman equations. This process is broken down into two interacting components:
 
-$$
-V^*(s) = \max_{a} \sum_{s', r} p(s', r | s, a) [r + \gamma V^*(s')]
-$$
+1.  **Prediction (Policy Evaluation):** Calculating the value function $V^\pi$ for a specific policy.
+2.  **Control (Policy Improvement):** using $V^\pi$ to find a better policy $\pi'$.
 
 By treating the value function $V$ as a vector and the transitions $P$ as a tensor, we compute updates using `numpy.einsum` and broadcasting, eliminating Python-level loops over states.
 
-## 🧮 Vectorized Policy Evaluation
+## Vectorized Policy Evaluation
 
 Instead of iterating through states and actions with slow Python loops, we evaluate a policy $\pi$ by reducing the 3D dynamics tensors into 2D/1D matrices specific to that policy.
 
@@ -78,15 +77,44 @@ With these pre-computed matrices, the Bellman Expectation Equation becomes a cle
 
 $$V_{new} = r^\pi + \gamma (P^\pi \cdot V_{old})$$
 
-In code, this is simply:
-```python
-V_new = r_pi + gamma * (P_pi @ V)
-```
+    V_new = r_pi + gamma * (P_pi @ V)
 
-## 🚀 Roadmap
+## Vectorized Policy Improvement
 
-1.  **Tensor-ification:** Bridge `env.P` to Numpy Tensors.
-2.  **Vectorized Policy Evaluation:** Implement $V^\pi$ estimation.
-3.  **Policy Iteration:** Full control loop.
+Once we have the value of the current policy ($V^\pi$), we can improve it by acting greedily. This requires calculating the Action-Value function $Q(s, a)$.
+
+$$Q(s, a) = \sum_{s'} P(s'|s,a) [ R(s,a,s') + \gamma V(s') ]$$
+
+We vectorize this calculation by splitting it into two parts:
+
+### 1. Expected Immediate Reward
+The reward $R$ is weighted by the transition probabilities $P$.
+* **Code:** `expected_immediate_reward = np.einsum('sak, sak -> sa', P, R)`
+
+### 2. Expected Future Value
+The discounted value of the next state, weighted by transition probabilities.
+* **Code:** `expected_future_value = np.einsum('sak, k -> sa', P, V)`
+
+### 3. The Greedy Update
+We combine these to get the Q-values and simply select the best action for each state (row).
+
+    Q = expected_immediate_reward + gamma * expected_future_value
+    best_actions = np.argmax(Q, axis=1)
+
+## Policy Iteration
+
+The full **Policy Iteration** algorithm simply loops between the two vector operations defined above:
+
+1.  **Evaluate:** Get $V^\pi$ for the current policy using the linear algebra update.
+2.  **Improve:** Update $\pi$ to be greedy with respect to $V^\pi$.
+3.  **Repeat:** Continue until the policy stops changing (Stability).
+
+This method is guaranteed to converge to the optimal policy $\pi^*$.
+
+## Roadmap
+
+1.  **Tensor-ification:** Bridge `env.P` to Numpy Tensors. [Complete]
+2.  **Vectorized Policy Evaluation:** Implement $V^\pi$ estimation. [Complete]
+3.  **Policy Iteration:** Full control loop. [Complete]
 4.  **Value Iteration:** Aggressive value updates.
 5.  **Visualization:** Heatmap overlays and agent simulation.
