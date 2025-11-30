@@ -96,8 +96,50 @@ def plot_heatmap(env: gym.Env, V: np.ndarray, policy: np.ndarray, filename: str=
     print(f"Heatmap saved to {filename}")
     plt.close()
 
+
+def record_agent_run(env: gym.Env, policy: np.ndarray, filename: str="agent_run.gif") -> None:
+    """
+    Runs a simulation of the agent following the provided policy
+    and saves the frames as a GIF.
+    """
+    frames = []
+    
+    # 1. Reset Environment
+    state, _ = env.reset()
+    
+    # Capture the starting frame
+    frames.append(env.render())
+
+    done = False
+    step_count = 0
+    max_steps = 100 # Safety limit to prevent infinite loops if agent gets stuck
+
+    print("Simulating agent...")
+    
+    while not done and step_count < max_steps:
+        # 2. Select Action
+        # The policy array is (S, A), we take the best action for the current state
+        action = np.argmax(policy[state])
+        
+        # 3. Step
+        state, reward, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
+        
+        # 4. Capture Frame
+        frames.append(env.render())
+        step_count += 1
+
+    env.close()
+
+    # 5. Save GIF
+    # duration is time per frame in milliseconds
+    imageio.mimsave(filename, frames, fps=2) 
+    print(f"Simulation GIF saved to {filename} ({step_count} steps)")
+
 if __name__ == "__main__":
 
     env, optimal_policy, optimal_V = run_solver()
 
     plot_heatmap(env, optimal_V, optimal_policy)
+
+    record_agent_run(env, optimal_policy)
