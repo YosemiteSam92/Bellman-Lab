@@ -86,5 +86,61 @@ class TestBellmanModel(unittest.TestCase):
         # Check state values are non-negative for all states
         self.assertTrue(np.all(V_pi >= 0), "All values in V_pi should be non-negative.")
 
+    """ Test policy iteration """
+
+    def test_policy_iteration_convergence(self):
+        """
+        Verifies that policy iteration produces a valid policy and value function.
+        """
+        optimal_policy, optimal_V = self.model.policy_iteration()
+
+        # --- check shapes ---
+        self.assertEqual(
+            optimal_policy.shape,
+            (16, 4),
+            f"Policy tensor shape mismatch. Should be (16, 4), got {optimal_policy.shape}"
+        )
+
+        self.assertEqual(
+            optimal_V.shape,
+            (16, ),
+            f"V tensor shape mismatch. Should be (16,), got {optimal_V.shape}"
+        )
+
+        # --- check that the policy is deterministic (one-hot) ---
+        # summing over actions should yield 1.0 for every state
+        self.assertTrue(
+            np.allclose(np.sum(optimal_policy, axis=1), 1.0),
+            "Policy is not normalized to 1 over actions."
+        )
+        # all the probability mass should be concentrated onto the optimal action,
+        # with all other actions being assigned zero probability
+        self.assertTrue(
+            np.allclose(np.max(optimal_policy, axis=1), 1.0),
+            "Policy does not assign all probability mass to the optimal action."
+        )
+
+        # --- Sanity check: the start state (0) should have a value > 0 ---
+        # because it is possible to reach the goal (15) which has reward +1
+        self.assertGreater(
+            optimal_V[0],
+            0.0,
+            "The start state (0) should have a value > 0."
+        )
+
+        # --- Sanity check: the goal state (15) should have zero value ---
+        # value of a state = expected immediate reward + gamma * expected future value
+        # since the goal state is terminal, its expected guture reward is 0
+        # furthermore, in this gymnasium implementation, terminal states transition to themselves
+        # with zero reward, so the expected immediate reward is also 0
+        self.assertEqual(
+            optimal_V[15],
+            0.0,
+            "The goal state (15) should have zero value."
+        )
+
+
+
+
 if __name__ == "__main__":
     unittest.main()
