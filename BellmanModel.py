@@ -287,14 +287,19 @@ class BellmanModel:
             iteration_count += 1
 
             # 2. Compute Q-values and take the max over actions
-            V_new = self.get_q_values(V, gamma).max(axis=1)
+            V_new = np.max(self.get_q_values(V, gamma), axis=1)
+
+            # compute the max absolute difference
+            diff = np.max(np.abs(V_new - V))
+            
+            # update
+            V = V_new
 
             # 3. Check for convergence
-            if np.max(np.abs(V_new - V)) < theta:
+            if diff < theta:
                 print(f"Value iteration converged after {iteration_count} step.")
                 break
 
-            V = V_new
 
         # 4. Create a new policy that is greedy w.r.t. the optimal value function just calculated
         optimal_policy = self.policy_improvement(V, gamma)
