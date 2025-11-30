@@ -1,5 +1,7 @@
 # Bellman-Lab: Vectorized Dynamic Programming for RL
 
+![Agent Simulation](assets/agent_run.gif)
+
 A fully vectorized, Numpy-based implementation of Dynamic Programming algorithms (Value Iteration and Policy Iteration) to solve the `Frozen Lake` environment from Gymnasium.
 
 ## Project Goal
@@ -129,10 +131,51 @@ We vectorize this efficiently:
 
 By repeating this update until $V$ stops changing, we converge to $V^*$. This approach is often computationally cheaper per iteration than Policy Iteration because it avoids solving a linear system or running a nested evaluation loop.
 
+## Results & Analysis
+
+After converging to the optimal Value Function $V^*$, we project the values back onto the 4x4 grid.
+
+* **Color Scale:** Lighter (Yellow) tiles represent higher value states (closer to Goal). Darker (Purple) tiles represent low value states (near Holes).
+* **Arrows:** The arrows represent the optimal policy $\pi^*(s)$.
+
+![Optimal Value Heatmap](assets/value_heatmap.png)
+
+### The "Wall Bumping" Strategy
+
+An interesting emergent behavior is seen at the **Start State (0,0)** (top-left). The policy points **LEFT**, directly into the wall.
+
+At first glance, this seems wrong. The goal is down-right, so why not go **DOWN**? The answer lies in the stochastic mechanics of the environment.
+
+* **Slippery Rule:** If you choose an action, you have a $1/3$ chance of going that way, and a $1/3$ chance of slipping to either perpendicular side.
+* **Wall Rule:** If you move into a wall, you bounce back and stay in the same state.
+
+Let's look at the math derived from our Value Function $V^*$:
+* $V(\text{Start}) \approx 0.542$
+* $V(\text{Down}) \approx 0.558$ (Higher Value!)
+* $V(\text{Right}) \approx 0.499$ (Lower Value - dangerous path)
+
+#### Scenario A: The "Intuitive" Move (DOWN)
+If the agent chooses **DOWN**, it risks slipping **RIGHT** (towards the danger zone and a lower-value tile).
+* $33\%$ Down $\rightarrow$ lands on $V=0.558$ (Success)
+* $33\%$ Left $\rightarrow$ hits wall, stays on $V=0.542$ (Neutral)
+* $33\%$ Right $\rightarrow$ slips to $V=0.499$ (**Failure**, lower state value than the current one)
+
+$$E[V] \approx 0.33(0.558) + 0.33(0.542) + 0.33(0.499) \approx \mathbf{0.533}$$
+
+#### Scenario B: The "Wall Bump" (LEFT)
+If the agent chooses **LEFT**, it drives into the wall. This removes the "Right" slip entirely.
+* $33\%$ Left $\rightarrow$ hits wall, stays on $V=0.542$ (Neutral)
+* $33\%$ Up $\rightarrow$ hits wall, stays on $V=0.542$ (Neutral)
+* $33\%$ Down $\rightarrow$ slips to $V=0.558$ (Success, higher state value than the current one)
+
+$$E[V] \approx 0.33(0.542) + 0.33(0.542) + 0.33(0.558) \approx \mathbf{0.547}$$
+
+**Conclusion:** Since $0.547 > 0.533$, the optimal move is to grind against the wall and wait for the ice to slip you Down, rather than risking a slip to the Right. The agent has learned to exploit the environment's physics to mitigate risk.
+
 ## Roadmap
 
 1.  **Tensor-ification:** Bridge `env.P` to Numpy Tensors. [Complete]
 2.  **Vectorized Policy Evaluation:** Implement $V^\pi$ estimation. [Complete]
 3.  **Policy Iteration:** Full control loop. [Complete]
 4.  **Value Iteration:** Aggressive value updates. [Complete]
-5.  **Visualization:** Heatmap overlays and agent simulation.
+5.  **Visualization:** Heatmap overlays and agent simulation. [Complete]
